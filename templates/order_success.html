@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Order Successful - ShopSmart</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+
+<body>
+
+<!-- Navigation -->
+
+<nav>
+
+    <div class="logo">
+        🛒 ShopSmart
+    </div>
+
+    <form action="/products" method="GET">
+
+        <input
+            type="text"
+            name="search"
+            placeholder="Search products..."
+        >
+
+        <button type="submit">
+            Search
+        </button>
+
+    </form>
+
+    <div>
+
+        <a href="/">
+            Home
+        </a>
+
+        <a href="/products">
+            Products
+        </a>
+
+        <a href="/cart">
+            Cart 🛒
+        </a>
+
+    </div>
+
+</nav>
+
+
+<!-- Order Success -->
+
+<section class="success-section">
+
+    <div class="success-box">
+
+        <div class="success-icon">
+            ✅
+        </div>
+
+        <h1>
+            Order Placed Successfully!
+        </h1>
+
+        <p class="success-message">
+            Thank you, <strong>{{ name }}</strong>!
+        </p>
+
+        <p>
+            Your order has been placed successfully.
+            We will process your order soon.
+        </p>
+
+
+        <!-- Order Details -->
+
+        <div class="order-details">
+
+            <h2>
+                📦 Order Details
+            </h2>
+
+            <p>
+                <strong>Name:</strong>
+                {{ name }}
+            </p>
+
+            <p>
+                <strong>Email:</strong>
+                {{ email }}
+            </p>
+
+            <p>
+                <strong>Phone:</strong>
+                {{ phone }}
+            </p>
+
+            <p>
+                <strong>Delivery Address:</strong>
+                {{ address }}
+            </p>
+
+            <p>
+                <strong>Payment Method:</strong>
+                {{ payment }}
+            </p>
+
+        </div>
+
+
+        <!-- Ordered Products -->
+
+        <div class="ordered-products">
+
+            <h2>
+                🛍️ Ordered Products
+            </h2>
+
+            {% for product in products %}
+
+            <div class="ordered-item">
+
+                <span>
+                    {{ product.name[:70] }}
+                </span>
+
+                <strong>
+                    ₹{{ product.price }}
+                </strong>
+
+            </div>
+
+            {% endfor %}
+
+        </div>
+
+
+        <!-- Total -->
+
+        <div class="order-total">
+
+            <h2>
+                Total Amount:
+                ₹{{ "%.2f"|format(total) }}
+            </h2>
+
+        </div>
+
+
+        <!-- Buttons -->
+
+        <div class="success-buttons">
+
+            <a
+                href="/products"
+                class="cart-button"
+            >
+                Continue Shopping 🛍️
+            </a>
+
+            <a
+                href="/"
+                class="view-button"
+            >
+                Go to Home 🏠
+            </a>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- Footer -->
+
+<footer>
+
+    <p>
+        © 2026 ShopSmart |
+        AI-Powered E-Commerce Platform
+    </p>
+
+</footer>
+
+
+</body>
+
+</html>

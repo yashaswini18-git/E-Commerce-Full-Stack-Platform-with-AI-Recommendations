@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Products - ShopSmart</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+<nav>
+    <div class="logo">🛒 ShopSmart</div>
+
+    <form action="/products" method="GET">
+        <input
+            type="text"
+            name="search"
+            placeholder="Search products..."
+            value="{{ search }}"
+        >
+        <button type="submit">Search</button>
+    </form>
+
+    <div>
+        <a href="/">Home</a>
+        <a href="/products">Products</a>
+        <a href="#">Login</a>
+        <a href="#">Cart 🛒</a>
+    </div>
+</nav>
+
+
+<section class="products-section">
+
+    <h1>All Products</h1>
+
+    {% if search %}
+        <p>Search results for: <strong>{{ search }}</strong></p>
+    {% endif %}
+
+
+    <div class="product-grid">
+
+        {% for product in products %}
+
+        <div class="product-card">
+
+            <div class="product-image">
+                🛍️
+            </div>
+
+            <h3>{{ product.name[:80] }}</h3>
+
+            <p>{{ product.category[:60] }}</p>
+
+            <h4>₹{{ product.price }}</h4>
+
+            <a
+                href="/product/{{ product.id }}"
+                class="view-button"
+            >
+                View Product
+            </a>
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+</section>
+
+
+<footer>
+    <p>© 2026 ShopSmart | AI-Powered E-Commerce Platform</p>
+</footer>
+
+</body>
+</html>

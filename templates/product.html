@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>{{ product.name[:50] }} - ShopSmart</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+
+</head>
+
+
+<body>
+
+<!-- =========================
+     NAVIGATION BAR
+========================= -->
+
+<nav>
+
+    <div class="logo">
+        🛒 ShopSmart
+    </div>
+
+
+    <form action="/products" method="GET">
+
+        <input
+            type="text"
+            name="search"
+            placeholder="Search products..."
+        >
+
+        <button type="submit">
+            Search
+        </button>
+
+    </form>
+
+
+    <div>
+
+        <a href="/">
+            Home
+        </a>
+
+        <a href="/products">
+            Products
+        </a>
+
+        <a href="#">
+            Login
+        </a>
+
+        <a href="/cart">
+            Cart 🛒
+        </a>
+
+    </div>
+
+</nav>
+
+
+<!-- =========================
+     PRODUCT DETAILS
+========================= -->
+
+<section class="product-details">
+
+
+    <!-- Product Image -->
+
+    <div class="product-large-image">
+
+        🛍️
+
+    </div>
+
+
+    <!-- Product Information -->
+
+    <div class="product-information">
+
+
+        <h1>
+            {{ product.name[:150] }}
+        </h1>
+
+
+        <p>
+
+            <strong>
+                Category:
+            </strong>
+
+            {{ product.category }}
+
+        </p>
+
+
+        <p>
+
+            <strong>
+                Brand:
+            </strong>
+
+            {{ product.brand }}
+
+        </p>
+
+
+        <h2>
+            ₹{{ product.price }}
+        </h2>
+
+
+        <p>
+
+            ⭐ Rating:
+
+            {{ product.rating }}
+
+        </p>
+
+
+        <!-- Add To Cart -->
+
+        <a
+            href="/add-to-cart/{{ product.id }}"
+            class="cart-button"
+        >
+
+            Add to Cart 🛒
+
+        </a>
+
+
+    </div>
+
+</section>
+
+
+
+<!-- =========================
+     AI RECOMMENDATIONS
+========================= -->
+
+<section class="recommendations">
+
+
+    <h2>
+        🤖 AI Recommended For You
+    </h2>
+
+
+    <p>
+
+        Based on the product you are viewing,
+        our AI found these similar products.
+
+    </p>
+
+
+
+    <div class="product-grid">
+
+
+        {% for item in recommendations %}
+
+
+        <div class="product-card">
+
+
+            <!-- Recommendation Image -->
+
+            <div class="product-image">
+
+                🤖
+
+            </div>
+
+
+
+            <!-- Product Name -->
+
+            <h3>
+
+                {{ item.name[:80] }}
+
+            </h3>
+
+
+
+            <!-- Category -->
+
+            <p>
+
+                {{ item.category[:60] }}
+
+            </p>
+
+
+
+            <!-- Price -->
+
+            <h4>
+
+                ₹{{ item.price }}
+
+            </h4>
+
+
+
+            <!-- View Product -->
+
+            <a
+                href="/product/{{ item.id }}"
+                class="view-button"
+            >
+
+                View Product
+
+            </a>
+
+
+            <!-- Add Recommended Product To Cart -->
+
+            <a
+                href="/add-to-cart/{{ item.id }}"
+                class="cart-button"
+            >
+
+                Add to Cart 🛒
+
+            </a>
+
+
+        </div>
+
+
+        {% endfor %}
+
+
+    </div>
+
+
+</section>
+
+
+
+<!-- =========================
+     FOOTER
+========================= -->
+
+<footer>
+
+    <p>
+
+        © 2026 ShopSmart |
+        AI-Powered E-Commerce Platform
+
+    </p>
+
+</footer>
+
+
+</body>
+
+</html>
