@@ -1,63 +1,85 @@
-# =========================================================
-# SIGNUP
-# =========================================================
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - ShopSmart</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
 
-@app.route("/signup", methods=["GET", "POST"])
-def signup():
+<!-- NAVBAR -->
+<nav class="navbar">
+    <a href="{{ url_for('home') }}" class="logo">🛒 ShopSmart</a>
 
-    if request.method == "POST":
+    <form class="search-form" action="{{ url_for('products') }}" method="GET">
+        <input type="text" name="search" placeholder="Search products...">
+        <button type="submit">🔍</button>
+    </form>
 
-        name = request.form.get("name")
-        email = request.form.get("email")
-        phone = request.form.get("phone")
-        password = request.form.get("password")
+    <div class="nav-links">
+        <a href="{{ url_for('home') }}">Home</a>
+        <a href="{{ url_for('products') }}">Products</a>
+        <a href="{{ url_for('recommendations') }}">AI Picks</a>
+        <a href="{{ url_for('login') }}">Login</a>
+        <a href="{{ url_for('cart') }}" class="nav-cart">🛒 Cart</a>
+    </div>
+</nav>
 
-        # Check if email already exists
-        existing_user = User.query.filter_by(
-            email=email
-        ).first()
+<!-- SIGNUP FORM -->
+<div class="auth-page">
+    <div class="auth-card">
 
-        if existing_user:
+        <div class="auth-icon">🛍️</div>
+        <h1>Create Account</h1>
+        <p class="auth-sub">Join ShopSmart and start shopping</p>
 
-            flash(
-                "An account with this email already exists."
-            )
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="flash-message flash-{{ category }}" style="margin-bottom:16px;">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
 
-            return redirect(
-                url_for("signup")
-            )
+        <form class="auth-form" action="{{ url_for('signup') }}" method="POST">
 
-        # Hash password before storing it
-        hashed_password = generate_password_hash(
-            password
-        )
+            <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" name="name" placeholder="Enter your full name" required>
+            </div>
 
-        # Create new user
-        new_user = User(
+            <div class="form-group">
+                <label>Email Address</label>
+                <input type="email" name="email" placeholder="Enter your email" required>
+            </div>
 
-            name=name,
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" name="password" placeholder="Create a password" required>
+            </div>
 
-            email=email,
+            <button type="submit" class="btn btn-accent btn-block" style="margin-top:8px;">
+                Create Account →
+            </button>
 
-            password=hashed_password,
+        </form>
 
-            phone=phone
-        )
+        <p class="auth-footer">
+            Already have an account?
+            <a href="{{ url_for('login') }}">Login here</a>
+        </p>
 
-        db.session.add(
-            new_user
-        )
+    </div>
+</div>
 
-        db.session.commit()
+<!-- FOOTER -->
+<footer>
+    <p>© 2026 <strong>ShopSmart</strong> · AI-Powered E-Commerce Platform</p>
+</footer>
 
-        flash(
-            "Account created successfully! Please login."
-        )
-
-        return redirect(
-            url_for("login")
-        )
-
-    return render_template(
-        "signup.html"
-    )
+</body>
+</html>

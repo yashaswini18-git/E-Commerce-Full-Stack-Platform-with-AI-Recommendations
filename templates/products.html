@@ -1,83 +1,527 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Products - ShopSmart</title>
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>
+        Products - ShopSmart
+    </title>
 
     <link rel="stylesheet"
           href="{{ url_for('static', filename='css/style.css') }}">
+
+
+    <style>
+
+        /* =====================================================
+           PRODUCT IMAGE
+        ===================================================== */
+
+        .products-image {
+            width: 100%;
+            height: 220px;
+
+            background: #f7f7f7;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            overflow: hidden;
+        }
+
+        .products-image img {
+            width: 100%;
+            height: 220px;
+
+            object-fit: contain;
+
+            background: white;
+
+            transition: transform 0.3s ease;
+        }
+
+        .product-card:hover
+        .products-image img {
+            transform: scale(1.05);
+        }
+
+        .image-placeholder {
+            font-size: 65px;
+        }
+
+
+        /* =====================================================
+           PRICE
+        ===================================================== */
+
+        .price-container {
+            margin: 8px 0;
+        }
+
+        .discounted-price {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .original-price {
+            color: #888;
+
+            text-decoration: line-through;
+
+            font-size: 14px;
+
+            margin-left: 7px;
+        }
+
+
+        /* =====================================================
+           MOBILE
+        ===================================================== */
+
+        @media (max-width: 768px) {
+
+            .products-image {
+                height: 190px;
+            }
+
+            .products-image img {
+                height: 190px;
+            }
+
+        }
+
+    </style>
+
 </head>
+
 
 <body>
 
-<nav>
-    <div class="logo">🛒 ShopSmart</div>
 
-    <form action="/products" method="GET">
+<!-- =========================================================
+     NAVBAR
+========================================================= -->
+
+<nav class="navbar">
+
+
+    <a href="{{ url_for('home') }}"
+       class="logo">
+
+        🛒 ShopSmart
+
+    </a>
+
+
+    <form class="search-form"
+          action="{{ url_for('products') }}"
+          method="GET">
+
         <input
             type="text"
             name="search"
             placeholder="Search products..."
-            value="{{ search }}"
+            value="{{ search|default('') }}"
         >
-        <button type="submit">Search</button>
+
+        <button type="submit">
+
+            🔍
+
+        </button>
+
     </form>
 
-    <div>
-        <a href="/">Home</a>
-        <a href="/products">Products</a>
-        <a href="#">Login</a>
-        <a href="#">Cart 🛒</a>
+
+    <div class="nav-links">
+
+
+        <a href="{{ url_for('home') }}">
+
+            Home
+
+        </a>
+
+
+        <a href="{{ url_for('products') }}"
+           class="active">
+
+            Products
+
+        </a>
+
+
+        <a href="{{ url_for('recommendations') }}">
+
+            AI Picks
+
+        </a>
+
+
+        {% if session.user_name %}
+
+            <a href="{{ url_for('logout') }}">
+
+                Logout
+
+            </a>
+
+        {% else %}
+
+            <a href="{{ url_for('login') }}">
+
+                Login
+
+            </a>
+
+        {% endif %}
+
+
+        <a href="{{ url_for('cart') }}"
+           class="nav-cart">
+
+            🛒 Cart
+
+        </a>
+
+
     </div>
+
 </nav>
 
 
-<section class="products-section">
 
-    <h1>All Products</h1>
+<!-- =========================================================
+     FLASH MESSAGES
+========================================================= -->
 
-    {% if search %}
-        <p>Search results for: <strong>{{ search }}</strong></p>
-    {% endif %}
+{% with messages = get_flashed_messages(with_categories=true) %}
 
+    {% if messages %}
 
-    <div class="product-grid">
+        <div class="flash-container">
 
-        {% for product in products %}
+            {% for category, message in messages %}
 
-        <div class="product-card">
+                <div class="flash-message flash-{{ category }}">
 
-            <div class="product-image">
-                🛍️
-            </div>
+                    {{ message }}
 
-            <h3>{{ product.name[:80] }}</h3>
+                </div>
 
-            <p>{{ product.category[:60] }}</p>
-
-            <h4>₹{{ product.price }}</h4>
-
-            <a
-                href="/product/{{ product.id }}"
-                class="view-button"
-            >
-                View Product
-            </a>
+            {% endfor %}
 
         </div>
 
-        {% endfor %}
+    {% endif %}
+
+{% endwith %}
+
+
+
+<!-- =========================================================
+     PRODUCTS
+========================================================= -->
+
+<section class="products-page">
+
+
+    <div class="products-page-header">
+
+        <h1>
+            All Products
+        </h1>
 
     </div>
+
+
+
+    <!-- SEARCH RESULT -->
+
+    {% if search %}
+
+        <p class="search-result-note">
+
+            Showing results for:
+
+            <strong>
+                {{ search }}
+            </strong>
+
+            &nbsp;·&nbsp;
+
+            <a
+                href="{{ url_for('products') }}"
+                style="color:var(--primary)"
+            >
+
+                Clear
+
+            </a>
+
+        </p>
+
+    {% endif %}
+
+
+
+    <!-- =====================================================
+         PRODUCT LIST
+    ====================================================== -->
+
+    {% if products %}
+
+
+        <div class="product-grid">
+
+
+            {% for product in products %}
+
+
+                <div class="product-card">
+
+
+                    <!-- =================================================
+                         PRODUCT IMAGE
+                    ================================================== -->
+
+                    <div class="products-image">
+
+
+                        {% if product.image_url %}
+
+
+                            <img
+                                src="{{ product.image_url }}"
+                                alt="{{ product.name }}"
+                                loading="lazy"
+                                onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"
+                            >
+
+
+                            <span
+                                class="image-placeholder"
+                                style="display:none;"
+                            >
+
+                                🛍️
+
+                            </span>
+
+
+                        {% else %}
+
+
+                            <span class="image-placeholder">
+
+                                🛍️
+
+                            </span>
+
+
+                        {% endif %}
+
+
+                    </div>
+
+
+
+                    <!-- =================================================
+                         PRODUCT INFORMATION
+                    ================================================== -->
+
+                    <div class="product-card-body">
+
+
+                        <h3>
+
+                            {{ product.name[:80] }}
+
+                        </h3>
+
+
+
+                        {% if product.brand %}
+
+                            <p class="product-card-category">
+
+                                Brand:
+                                {{ product.brand }}
+
+                            </p>
+
+                        {% endif %}
+
+
+
+                        {% if product.category %}
+
+                            <p class="product-card-category">
+
+                                {{ product.category[:60] }}
+
+                            </p>
+
+                        {% endif %}
+
+
+
+                        <!-- =================================================
+                             PRICE
+                        ================================================== -->
+
+                        {% if product.discounted_price
+                              and product.discounted_price > 0
+                              and product.discounted_price < product.price %}
+
+
+                            <div class="price-container">
+
+
+                                <span class="discounted-price">
+
+                                    ₹{{ "%.2f"|format(product.discounted_price) }}
+
+                                </span>
+
+
+                                <span class="original-price">
+
+                                    ₹{{ "%.2f"|format(product.price) }}
+
+                                </span>
+
+
+                            </div>
+
+
+                        {% else %}
+
+
+                            <p class="product-card-price">
+
+                                ₹{{ "%.2f"|format(product.price) }}
+
+                            </p>
+
+
+                        {% endif %}
+
+
+
+                        <!-- =================================================
+                             BUTTONS
+                        ================================================== -->
+
+                        <div class="product-card-actions">
+
+
+                            <a
+                                href="{{ url_for('product', product_id=product.id) }}"
+                                class="btn btn-outline btn-sm"
+                            >
+
+                                View
+
+                            </a>
+
+
+                            <a
+                                href="{{ url_for('add_to_cart', product_id=product.id) }}"
+                                class="btn btn-accent btn-sm"
+                            >
+
+                                Add to Cart
+
+                            </a>
+
+
+                        </div>
+
+
+                    </div>
+
+
+                </div>
+
+
+            {% endfor %}
+
+
+        </div>
+
+
+    {% else %}
+
+
+        <!-- =================================================
+             NO PRODUCTS
+        ================================================== -->
+
+        <div class="no-products">
+
+
+            <p>
+
+                😕 No products found
+
+                {% if search %}
+
+                    for
+                    "<strong>{{ search }}</strong>"
+
+                {% endif %}.
+
+            </p>
+
+
+            {% if search %}
+
+                <a
+                    href="{{ url_for('products') }}"
+                    class="btn btn-outline mt-16"
+                >
+
+                    Browse All Products
+
+                </a>
+
+            {% endif %}
+
+
+        </div>
+
+
+    {% endif %}
+
 
 </section>
 
 
+
+<!-- =========================================================
+     FOOTER
+========================================================= -->
+
 <footer>
-    <p>© 2026 ShopSmart | AI-Powered E-Commerce Platform</p>
+
+    <p>
+
+        © 2026
+        <strong>ShopSmart</strong>
+        · AI-Powered E-Commerce Platform
+
+    </p>
+
 </footer>
 
+
 </body>
+
 </html>

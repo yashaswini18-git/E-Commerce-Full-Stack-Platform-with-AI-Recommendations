@@ -1,198 +1,313 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
-
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>Order Successful - ShopSmart</title>
 
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='css/style.css') }}">
-</head>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
 
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f5f7fb;
+            color: #222;
+        }
+
+        .navbar {
+            background: #111827;
+            padding: 18px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 25px;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-size: 15px;
+        }
+
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
+
+        .success-container {
+            max-width: 700px;
+            margin: 70px auto;
+            padding: 20px;
+        }
+
+        .success-card {
+            background: white;
+            border-radius: 16px;
+            padding: 45px 35px;
+            text-align: center;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        .success-icon {
+            width: 85px;
+            height: 85px;
+            margin: 0 auto 25px;
+            border-radius: 50%;
+            background: #22c55e;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 45px;
+            font-weight: bold;
+        }
+
+        h1 {
+            margin: 0 0 15px;
+            font-size: 32px;
+            color: #111827;
+        }
+
+        .message {
+            color: #6b7280;
+            font-size: 17px;
+            margin-bottom: 30px;
+        }
+
+        .order-details {
+            background: #f9fafb;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 25px 0;
+            text-align: left;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            color: #6b7280;
+        }
+
+        .detail-value {
+            font-weight: bold;
+            color: #111827;
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 13px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 15px;
+        }
+
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #e5e7eb;
+            color: #111827;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 25px;
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        @media (max-width: 600px) {
+
+            .navbar {
+                padding: 15px 20px;
+            }
+
+            .nav-links {
+                gap: 12px;
+            }
+
+            .success-container {
+                margin: 30px auto;
+            }
+
+            .success-card {
+                padding: 30px 20px;
+            }
+
+            h1 {
+                font-size: 26px;
+            }
+        }
+    </style>
+</head>
 
 <body>
 
-<!-- Navigation -->
+    <!-- NAVBAR -->
 
-<nav>
+    <nav class="navbar">
 
-    <div class="logo">
-        🛒 ShopSmart
-    </div>
-
-    <form action="/products" method="GET">
-
-        <input
-            type="text"
-            name="search"
-            placeholder="Search products..."
-        >
-
-        <button type="submit">
-            Search
-        </button>
-
-    </form>
-
-    <div>
-
-        <a href="/">
-            Home
+        <a href="{{ url_for('home') }}" class="logo">
+            ShopSmart
         </a>
 
-        <a href="/products">
-            Products
-        </a>
+        <div class="nav-links">
 
-        <a href="/cart">
-            Cart 🛒
-        </a>
+            <a href="{{ url_for('home') }}">
+                Home
+            </a>
 
-    </div>
+            <a href="{{ url_for('products') }}">
+                Products
+            </a>
 
-</nav>
+            <a href="{{ url_for('recommendations') }}">
+                AI Picks
+            </a>
 
-
-<!-- Order Success -->
-
-<section class="success-section">
-
-    <div class="success-box">
-
-        <div class="success-icon">
-            ✅
-        </div>
-
-        <h1>
-            Order Placed Successfully!
-        </h1>
-
-        <p class="success-message">
-            Thank you, <strong>{{ name }}</strong>!
-        </p>
-
-        <p>
-            Your order has been placed successfully.
-            We will process your order soon.
-        </p>
-
-
-        <!-- Order Details -->
-
-        <div class="order-details">
-
-            <h2>
-                📦 Order Details
-            </h2>
-
-            <p>
-                <strong>Name:</strong>
-                {{ name }}
-            </p>
-
-            <p>
-                <strong>Email:</strong>
-                {{ email }}
-            </p>
-
-            <p>
-                <strong>Phone:</strong>
-                {{ phone }}
-            </p>
-
-            <p>
-                <strong>Delivery Address:</strong>
-                {{ address }}
-            </p>
-
-            <p>
-                <strong>Payment Method:</strong>
-                {{ payment }}
-            </p>
+            <a href="{{ url_for('cart') }}">
+                Cart
+            </a>
 
         </div>
 
+    </nav>
 
-        <!-- Ordered Products -->
 
-        <div class="ordered-products">
+    <!-- SUCCESS -->
 
-            <h2>
-                🛍️ Ordered Products
-            </h2>
+    <main class="success-container">
 
-            {% for product in products %}
+        <div class="success-card">
 
-            <div class="ordered-item">
+            <div class="success-icon">
+                ✓
+            </div>
 
-                <span>
-                    {{ product.name[:70] }}
-                </span>
+            <h1>
+                Order Placed Successfully!
+            </h1>
 
-                <strong>
-                    ₹{{ product.price }}
-                </strong>
+            <p class="message">
+                Thank you for shopping with ShopSmart.
+                Your order has been successfully placed.
+            </p>
+
+
+            <!-- ORDER DETAILS -->
+
+            <div class="order-details">
+
+                <div class="detail-row">
+
+                    <span class="detail-label">
+                        Order ID
+                    </span>
+
+                    <span class="detail-value">
+                        #{{ order.id }}
+                    </span>
+
+                </div>
+
+
+                <div class="detail-row">
+
+                    <span class="detail-label">
+                        Order Status
+                    </span>
+
+                    <span class="detail-value">
+                        {{ order.status }}
+                    </span>
+
+                </div>
+
+
+                <div class="detail-row">
+
+                    <span class="detail-label">
+                        Total Amount
+                    </span>
+
+                    <span class="detail-value">
+                        ₹{{ "%.2f"|format(order.total_amount) }}
+                    </span>
+
+                </div>
 
             </div>
 
-            {% endfor %}
+
+            <!-- BUTTONS -->
+
+            <div class="buttons">
+
+                <a
+                    href="{{ url_for('products') }}"
+                    class="btn btn-primary"
+                >
+                    Continue Shopping
+                </a>
+
+                <a
+                    href="{{ url_for('home') }}"
+                    class="btn btn-secondary"
+                >
+                    Back to Home
+                </a>
+
+            </div>
 
         </div>
 
-
-        <!-- Total -->
-
-        <div class="order-total">
-
-            <h2>
-                Total Amount:
-                ₹{{ "%.2f"|format(total) }}
-            </h2>
-
-        </div>
+    </main>
 
 
-        <!-- Buttons -->
+    <footer class="footer">
 
-        <div class="success-buttons">
-
-            <a
-                href="/products"
-                class="cart-button"
-            >
-                Continue Shopping 🛍️
-            </a>
-
-            <a
-                href="/"
-                class="view-button"
-            >
-                Go to Home 🏠
-            </a>
-
-        </div>
-
-    </div>
-
-</section>
-
-
-<!-- Footer -->
-
-<footer>
-
-    <p>
         © 2026 ShopSmart |
         AI-Powered E-Commerce Platform
-    </p>
 
-</footer>
-
+    </footer>
 
 </body>
-
 </html>

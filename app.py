@@ -9,7 +9,10 @@ from flask import (
 )
 
 from flask_sqlalchemy import SQLAlchemy
-from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.security import (
+    generate_password_hash,
+    check_password_hash
+)
 
 import pandas as pd
 import os
@@ -32,30 +35,14 @@ app.secret_key = os.getenv(
     "shopsmart-secret-key"
 )
 
-app.config["DATABASE_URL"] = os.getenv(
-    "DATABASE_URL"
-)
-
-# Use SQLite if DATABASE_URL is not available
-database_url = os.getenv("DATABASE_URL")
-
-if database_url:
-    app.config["SQLALCHEMY_DATABASE_URI"] = database_url
-else:
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///shopsmart.db"
-
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///shopsmart.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
-
-# ============================================================
-# DATABASE
-# ============================================================
 
 db = SQLAlchemy(app)
 
 
 # ============================================================
-# USER MODEL
+# DATABASE MODELS
 # ============================================================
 
 class User(db.Model):
@@ -82,10 +69,6 @@ class User(db.Model):
     )
 
 
-# ============================================================
-# ORDER MODEL
-# ============================================================
-
 class Order(db.Model):
 
     id = db.Column(
@@ -109,10 +92,6 @@ class Order(db.Model):
         default="Placed"
     )
 
-
-# ============================================================
-# ORDER ITEM MODEL
-# ============================================================
 
 class OrderItem(db.Model):
 
@@ -156,13 +135,12 @@ try:
 
     df = pd.read_csv(DATA_PATH)
 
-    print(
-        f"Product dataset loaded successfully!"
-    )
-
-    print(
-        f"Number of products: {len(df)}"
-    )
+    print("=" * 60)
+    print("Product dataset loaded successfully!")
+    print(f"Number of products: {len(df)}")
+    print("Dataset columns:")
+    print(list(df.columns))
+    print("=" * 60)
 
 except Exception as e:
 
@@ -175,44 +153,69 @@ except Exception as e:
 
 
 # ============================================================
-# CLEAN PRODUCT NAME
+# DATASET COMPATIBILITY
 # ============================================================
 
-def clean_product_name(
-    name,
-    brand=None,
-    category=None
-):
+OPTIONAL_COLUMNS = [
+    "product_search_description",
+    "variant",
+    "brand",
+    "price",
+    "discounted_price",
+    "usage",
+    "image_url"
+]
 
-    if pd.isna(name):
+for column in OPTIONAL_COLUMNS:
 
-        name = ""
-
-    name = str(name).strip()
-
-    if name:
-
-        return name
-
-    if brand and not pd.isna(brand):
-
-        return str(brand)
-
-    if category and not pd.isna(category):
-
-        return str(category)
-
-    return "Product"
+    if column not in df.columns:
+        df[column] = ""
 
 
 # ============================================================
-# HELPER FUNCTION
+# HELPER FUNCTIONS
+# ============================================================
+
+def safe_float(value):
+
+    try:
+
+        if pd.isna(value):
+            return 0.0
+
+        return float(value)
+
+    except (
+        ValueError,
+        TypeError
+    ):
+
+        return 0.0
+
+
+def safe_text(value):
+
+    if value is None:
+        return ""
+
+    try:
+
+        if pd.isna(value):
+            return ""
+
+    except Exception:
+        pass
+
+    return str(value).strip()
+
+
+# ============================================================
+# GET PRODUCT BY ID
 # ============================================================
 
 def get_product_by_id(product_id):
 
     if df.empty:
-
         return None
 
     try:
@@ -226,162 +229,262 @@ def get_product_by_id(product_id):
 
         return None
 
-    product_data = df[
+    if "id" not in df.columns:
+        return None
+
+    matches = df[
         df["id"] == product_id
     ]
 
-    if product_data.empty:
-
+    if matches.empty:
         return None
 
-    row = product_data.iloc[0]
+    row = matches.iloc[0]
+
+    name = safe_text(
+        row.get(
+            "name",
+            ""
+        )
+    )
+
+    brand = safe_text(
+        row.get(
+            "brand",
+            ""
+        )
+    )
+
+    description = safe_text(
+        row.get(
+            "product_search_description",
+            ""
+        )
+    )
+
+    variant = safe_text(
+        row.get(
+            "variant",
+            ""
+        )
+    )
+
+    usage = safe_text(
+        row.get(
+            "usage",
+            ""
+        )
+    )
+
+    image_url = safe_text(
+        row.get(
+            "image_url",
+            ""
+        )
+    )
+
+    price = safe_float(
+        row.get(
+            "price",
+            0
+        )
+    )
+
+    discounted_price = safe_float(
+        row.get(
+            "discounted_price",
+            0
+        )
+    )
+
+    # New dataset does not have a separate category column.
+    # We use product_search_description as category information.
+    category = description
+
+    rating = "No rating available"
 
     return {
-        "id": int(row["id"]),
 
-        "name": clean_product_name(
-            row["name"],
-            row["brand"],
-            row["category"]
-        ),
+        "id": product_id,
 
-        "price": float(row["price"]),
+        "name": name,
 
-        "category": str(
-            row["category"]
-        ),
+        "raw_name": name,
 
-        "brand": str(
-            row["brand"]
-        )
+        "category": category,
+
+        "price": price,
+
+        "brand": brand,
+
+        "rating": rating,
+
+        "description": description,
+
+        "product_specification": variant,
+
+        "variant": variant,
+
+        "usage": usage,
+
+        "discounted_price": discounted_price,
+
+        "image_url": image_url
     }
 
 
 # ============================================================
-# HOME PAGE
+# PRODUCT FROM DATAFRAME ROW
+# ============================================================
+
+def product_from_row(row):
+
+    try:
+
+        product_id = int(
+            row["id"]
+        )
+
+    except (
+        ValueError,
+        TypeError,
+        KeyError
+    ):
+
+        return None
+
+    return get_product_by_id(
+        product_id
+    )
+
+
+# ============================================================
+# HOME
 # ============================================================
 
 @app.route("/")
 def home():
 
-    products = []
+    featured_products = []
 
     if not df.empty:
 
         for _, row in df.head(12).iterrows():
 
-            products.append({
+            product = product_from_row(
+                row
+            )
 
-                "id": int(row["id"]),
+            if product:
 
-                "name": clean_product_name(
-                    row["name"],
-                    row["brand"],
-                    row["category"]
-                ),
-
-                "price": float(row["price"]),
-
-                "category": str(
-                    row["category"]
-                ),
-
-                "brand": str(
-                    row["brand"]
+                featured_products.append(
+                    product
                 )
-            })
 
     return render_template(
         "index.html",
-        products=products
+        products=featured_products
     )
 
 
 # ============================================================
-# PRODUCTS PAGE
+# PRODUCTS
 # ============================================================
 
 @app.route("/products")
 def products():
 
+    products_list = []
+
     search = request.args.get(
         "search",
         ""
-    ).strip()
-
-    category = request.args.get(
-        "category",
-        ""
-    ).strip()
-
-    products = []
+    ).strip().lower()
 
     if not df.empty:
 
-        filtered_df = df.copy()
+        filtered_df = df
 
-        # Search
         if search:
 
-            search_lower = search.lower()
+            name_mask = pd.Series(
+                False,
+                index=df.index
+            )
 
-            filtered_df = filtered_df[
-                filtered_df.apply(
-                    lambda row:
-                    search_lower in str(
-                        row.get("name", "")
-                    ).lower()
-                    or
-                    search_lower in str(
-                        row.get("brand", "")
-                    ).lower()
-                    or
-                    search_lower in str(
-                        row.get("category", "")
-                    ).lower(),
-                    axis=1
+            brand_mask = pd.Series(
+                False,
+                index=df.index
+            )
+
+            description_mask = pd.Series(
+                False,
+                index=df.index
+            )
+
+            if "name" in df.columns:
+
+                name_mask = (
+                    df["name"]
+                    .fillna("")
+                    .astype(str)
+                    .str.lower()
+                    .str.contains(
+                        search,
+                        regex=False
+                    )
                 )
-            ]
 
-        # Category
-        if category:
+            if "brand" in df.columns:
 
-            filtered_df = filtered_df[
-                filtered_df["category"]
-                .astype(str)
-                .str.lower()
-                ==
-                category.lower()
+                brand_mask = (
+                    df["brand"]
+                    .fillna("")
+                    .astype(str)
+                    .str.lower()
+                    .str.contains(
+                        search,
+                        regex=False
+                    )
+                )
+
+            if "product_search_description" in df.columns:
+
+                description_mask = (
+                    df[
+                        "product_search_description"
+                    ]
+                    .fillna("")
+                    .astype(str)
+                    .str.lower()
+                    .str.contains(
+                        search,
+                        regex=False
+                    )
+                )
+
+            filtered_df = df[
+                name_mask
+                | brand_mask
+                | description_mask
             ]
 
         for _, row in filtered_df.head(100).iterrows():
 
-            products.append({
+            product = product_from_row(
+                row
+            )
 
-                "id": int(row["id"]),
+            if product:
 
-                "name": clean_product_name(
-                    row["name"],
-                    row["brand"],
-                    row["category"]
-                ),
-
-                "price": float(row["price"]),
-
-                "category": str(
-                    row["category"]
-                ),
-
-                "brand": str(
-                    row["brand"]
+                products_list.append(
+                    product
                 )
-            })
 
     return render_template(
         "products.html",
-        products=products,
-        search=search,
-        category=category
+        products=products_list,
+        search=search
     )
 
 
@@ -389,14 +492,16 @@ def products():
 # PRODUCT DETAILS
 # ============================================================
 
-@app.route("/product/<int:product_id>")
+@app.route(
+    "/product/<int:product_id>"
+)
 def product(product_id):
 
-    product = get_product_by_id(
+    product_data = get_product_by_id(
         product_id
     )
 
-    if product is None:
+    if not product_data:
 
         flash(
             "Product not found.",
@@ -407,502 +512,227 @@ def product(product_id):
             url_for("products")
         )
 
-    # AI recommendations
-    recommendations = []
+    similar_products = []
 
     try:
 
-        recommended_ids = get_recommendations(
+        recommendations_data = get_recommendations(
             product_id,
-            number_of_recommendations=5
+            5
         )
 
-        for recommended_id in recommended_ids:
+        if isinstance(
+            recommendations_data,
+            pd.DataFrame
+        ):
 
-            try:
-
-                recommended_id = int(
-                    recommended_id
-                )
-
-            except (
-                ValueError,
-                TypeError
-            ):
-
-                continue
-
-            recommended_product = (
-                get_product_by_id(
-                    recommended_id
+            recommendations_data = (
+                recommendations_data.to_dict(
+                    orient="records"
                 )
             )
 
-            if recommended_product:
+        for item in recommendations_data:
 
-                recommendations.append(
-                    recommended_product
+            if not isinstance(
+                item,
+                dict
+            ):
+                continue
+
+            rec_id = item.get(
+                "id"
+            )
+
+            if rec_id is None:
+                continue
+
+            rec_product = get_product_by_id(
+                rec_id
+            )
+
+            if rec_product:
+
+                rec_product[
+                    "similarity_score"
+                ] = item.get(
+                    "similarity_score",
+                    0
+                )
+
+                similar_products.append(
+                    rec_product
                 )
 
     except Exception as e:
 
         print(
-            "Recommendation error:",
+            "Product recommendation error:",
             e
         )
 
     return render_template(
         "product.html",
-        product=product,
-        recommendations=recommendations
+        product=product_data,
+        recommendations=similar_products,
+        similar_products=similar_products
     )
 
 
 # ============================================================
-# AI RECOMMENDATIONS PAGE
+# AI RECOMMENDATIONS
 # ============================================================
 
 @app.route("/recommendations")
 def recommendations():
 
     product_id = request.args.get(
-        "product_id",
-        type=int
+        "product_id"
     )
-
-    # Use first product if no product is selected
-    if product_id is None:
-
-        if df.empty:
-
-            return render_template(
-                "recommendations.html",
-                recommendations=[]
-            )
-
-        product_id = int(
-            df.iloc[0]["id"]
-        )
-
-    # Get AI recommendations
-    try:
-
-        recommended_ids = get_recommendations(
-            product_id,
-            number_of_recommendations=5
-        )
-
-    except Exception as e:
-
-        print(
-            "AI recommendation error:",
-            e
-        )
-
-        recommended_ids = []
-
-    # Convert recommendation IDs
-    # into product dictionaries
 
     recommended_products = []
 
-    for recommended_id in recommended_ids:
+    # --------------------------------------------------------
+    # SELECTED PRODUCT RECOMMENDATIONS
+    # --------------------------------------------------------
+
+    if product_id:
 
         try:
 
-            recommended_id = int(
-                recommended_id
+            product_id = int(
+                product_id
             )
 
-        except (
-            ValueError,
-            TypeError
-        ):
-
-            continue
-
-        product_data = df[
-            df["id"] == recommended_id
-        ]
-
-        if product_data.empty:
-
-            continue
-
-        row = product_data.iloc[0]
-
-        recommended_products.append({
-
-            "id": int(
-                row["id"]
-            ),
-
-            "name": clean_product_name(
-                row["name"],
-                row["brand"],
-                row["category"]
-            ),
-
-            "price": float(
-                row["price"]
-            ),
-
-            "category": str(
-                row["category"]
-            ),
-
-            "brand": str(
-                row["brand"]
+            recommendations_data = get_recommendations(
+                product_id,
+                20
             )
 
-        })
+            if isinstance(
+                recommendations_data,
+                pd.DataFrame
+            ):
+
+                recommendations_data = (
+                    recommendations_data.to_dict(
+                        orient="records"
+                    )
+                )
+
+            for item in recommendations_data:
+
+                if not isinstance(
+                    item,
+                    dict
+                ):
+                    continue
+
+                rec_id = item.get(
+                    "id"
+                )
+
+                if rec_id is None:
+                    continue
+
+                rec_product = get_product_by_id(
+                    rec_id
+                )
+
+                if rec_product:
+
+                    rec_product[
+                        "similarity_score"
+                    ] = item.get(
+                        "similarity_score",
+                        0
+                    )
+
+                    recommended_products.append(
+                        rec_product
+                    )
+
+        except Exception as e:
+
+            print(
+                "Recommendation error:",
+                e
+            )
+
+    # --------------------------------------------------------
+    # GENERAL AI PICKS
+    # --------------------------------------------------------
+
+    if (
+        not recommended_products
+        and not df.empty
+    ):
+
+        try:
+
+            first_product_id = int(
+                df.iloc[0]["id"]
+            )
+
+            recommendations_data = get_recommendations(
+                first_product_id,
+                20
+            )
+
+            if isinstance(
+                recommendations_data,
+                pd.DataFrame
+            ):
+
+                recommendations_data = (
+                    recommendations_data.to_dict(
+                        orient="records"
+                    )
+                )
+
+            for item in recommendations_data:
+
+                if not isinstance(
+                    item,
+                    dict
+                ):
+                    continue
+
+                rec_id = item.get(
+                    "id"
+                )
+
+                if rec_id is None:
+                    continue
+
+                rec_product = get_product_by_id(
+                    rec_id
+                )
+
+                if rec_product:
+
+                    rec_product[
+                        "similarity_score"
+                    ] = item.get(
+                        "similarity_score",
+                        0
+                    )
+
+                    recommended_products.append(
+                        rec_product
+                    )
+
+        except Exception as e:
+
+            print(
+                "General AI recommendation error:",
+                e
+            )
 
     return render_template(
         "recommendations.html",
-        recommendations=recommended_products
-    )
-
-
-# ============================================================
-# ADD TO CART
-# ============================================================
-
-@app.route("/add-to-cart/<int:product_id>")
-def add_to_cart(product_id):
-
-    product = get_product_by_id(
-        product_id
-    )
-
-    if product is None:
-
-        flash(
-            "Product not found.",
-            "danger"
-        )
-
-        return redirect(
-            url_for("products")
-        )
-
-    cart = session.get(
-        "cart",
-        {}
-    )
-
-    product_id_str = str(
-        product_id
-    )
-
-    if product_id_str in cart:
-
-        cart[product_id_str] += 1
-
-    else:
-
-        cart[product_id_str] = 1
-
-    session["cart"] = cart
-
-    session.modified = True
-
-    flash(
-        "Product added to cart!",
-        "success"
-    )
-
-    return redirect(
-        request.referrer
-        or url_for("products")
-    )
-
-
-# ============================================================
-# CART
-# ============================================================
-
-@app.route("/cart")
-def cart():
-
-    cart_data = session.get(
-        "cart",
-        {}
-    )
-
-    cart_products = []
-
-    total = 0
-
-    for product_id, quantity in cart_data.items():
-
-        product = get_product_by_id(
-            product_id
-        )
-
-        if product is None:
-
-            continue
-
-        product["quantity"] = quantity
-
-        product["subtotal"] = (
-            product["price"] * quantity
-        )
-
-        total += product["subtotal"]
-
-        cart_products.append(
-            product
-        )
-
-    return render_template(
-        "cart.html",
-        cart_products=cart_products,
-        total=total
-    )
-
-
-# ============================================================
-# REMOVE FROM CART
-# ============================================================
-
-@app.route(
-    "/remove-from-cart/<int:product_id>"
-)
-def remove_from_cart(product_id):
-
-    cart = session.get(
-        "cart",
-        {}
-    )
-
-    product_id_str = str(
-        product_id
-    )
-
-    if product_id_str in cart:
-
-        del cart[
-            product_id_str
-        ]
-
-    session["cart"] = cart
-
-    session.modified = True
-
-    flash(
-        "Product removed from cart.",
-        "success"
-    )
-
-    return redirect(
-        url_for("cart")
-    )
-
-
-# ============================================================
-# CLEAR CART
-# ============================================================
-
-@app.route("/clear-cart")
-def clear_cart():
-
-    session["cart"] = {}
-
-    session.modified = True
-
-    flash(
-        "Cart cleared.",
-        "success"
-    )
-
-    return redirect(
-        url_for("cart")
-    )
-
-
-# ============================================================
-# CHECKOUT
-# ============================================================
-
-@app.route("/checkout")
-def checkout():
-
-    if "user_id" not in session:
-
-        flash(
-            "Please login before checkout.",
-            "warning"
-        )
-
-        return redirect(
-            url_for("login")
-        )
-
-    cart_data = session.get(
-        "cart",
-        {}
-    )
-
-    if not cart_data:
-
-        flash(
-            "Your cart is empty.",
-            "warning"
-        )
-
-        return redirect(
-            url_for("cart")
-        )
-
-    cart_products = []
-
-    total = 0
-
-    for product_id, quantity in cart_data.items():
-
-        product = get_product_by_id(
-            product_id
-        )
-
-        if product is None:
-
-            continue
-
-        product["quantity"] = quantity
-
-        product["subtotal"] = (
-            product["price"] * quantity
-        )
-
-        total += product["subtotal"]
-
-        cart_products.append(
-            product
-        )
-
-    return render_template(
-        "checkout.html",
-        cart_products=cart_products,
-        total=total
-    )
-
-
-# ============================================================
-# PLACE ORDER
-# ============================================================
-
-@app.route(
-    "/place-order",
-    methods=["POST"]
-)
-def place_order():
-
-    if "user_id" not in session:
-
-        flash(
-            "Please login before placing an order.",
-            "warning"
-        )
-
-        return redirect(
-            url_for("login")
-        )
-
-    cart_data = session.get(
-        "cart",
-        {}
-    )
-
-    if not cart_data:
-
-        flash(
-            "Your cart is empty.",
-            "warning"
-        )
-
-        return redirect(
-            url_for("cart")
-        )
-
-    total = 0
-
-    order_items = []
-
-    for product_id, quantity in cart_data.items():
-
-        product = get_product_by_id(
-            product_id
-        )
-
-        if product is None:
-
-            continue
-
-        subtotal = (
-            product["price"] * quantity
-        )
-
-        total += subtotal
-
-        order_items.append({
-
-            "product_id": product["id"],
-
-            "quantity": quantity,
-
-            "price": product["price"]
-
-        })
-
-    # Create order
-    order = Order(
-
-        user_id=session["user_id"],
-
-        total_amount=total,
-
-        status="Placed"
-
-    )
-
-    db.session.add(order)
-
-    db.session.flush()
-
-    # Add order items
-    for item in order_items:
-
-        order_item = OrderItem(
-
-            order_id=order.id,
-
-            product_id=item["product_id"],
-
-            quantity=item["quantity"],
-
-            price=item["price"]
-
-        )
-
-        db.session.add(
-            order_item
-        )
-
-    db.session.commit()
-
-    # Empty cart
-    session["cart"] = {}
-
-    session.modified = True
-
-    flash(
-        "Order placed successfully!",
-        "success"
-    )
-
-    return redirect(
-        url_for("home")
+        recommendations=recommended_products,
+        products=recommended_products
     )
 
 
@@ -952,7 +782,7 @@ def signup():
 
             flash(
                 "Email already registered.",
-                "danger"
+                "warning"
             )
 
             return redirect(
@@ -964,21 +794,19 @@ def signup():
         )
 
         user = User(
-
             name=name,
-
             email=email,
-
             password=hashed_password
-
         )
 
-        db.session.add(user)
+        db.session.add(
+            user
+        )
 
         db.session.commit()
 
         flash(
-            "Account created successfully! Please login.",
+            "Account created successfully. Please login.",
             "success"
         )
 
@@ -1073,27 +901,819 @@ def logout():
 
 
 # ============================================================
+# ADD TO CART
+# ============================================================
+
+@app.route(
+    "/add-to-cart/<int:product_id>",
+    methods=["POST", "GET"]
+)
+def add_to_cart(product_id):
+
+    product_data = get_product_by_id(
+        product_id
+    )
+
+    if not product_data:
+
+        flash(
+            "Product not found.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("products")
+        )
+
+    cart = session.get(
+        "cart",
+        {}
+    )
+
+    if not isinstance(
+        cart,
+        dict
+    ):
+
+        cart = {}
+
+    key = str(
+        product_id
+    )
+
+    # --------------------------------------------------------
+    # PRODUCT ALREADY EXISTS
+    # --------------------------------------------------------
+
+    if key in cart:
+
+        cart[key]["quantity"] = (
+            int(
+                cart[key].get(
+                    "quantity",
+                    1
+                )
+            ) + 1
+        )
+
+        cart[key]["image_url"] = product_data.get(
+            "image_url",
+            ""
+        )
+
+        cart[key]["brand"] = product_data.get(
+            "brand",
+            ""
+        )
+
+        cart[key]["category"] = product_data.get(
+            "category",
+            ""
+        )
+
+        cart[key]["variant"] = product_data.get(
+            "variant",
+            ""
+        )
+
+    # --------------------------------------------------------
+    # NEW PRODUCT
+    # --------------------------------------------------------
+
+    else:
+
+        cart[key] = {
+
+            "id": product_data["id"],
+
+            "name": product_data["name"],
+
+            "brand": product_data.get(
+                "brand",
+                ""
+            ),
+
+            "category": product_data.get(
+                "category",
+                ""
+            ),
+
+            "description": product_data.get(
+                "description",
+                ""
+            ),
+
+            "variant": product_data.get(
+                "variant",
+                ""
+            ),
+
+            "usage": product_data.get(
+                "usage",
+                ""
+            ),
+
+            "image_url": product_data.get(
+                "image_url",
+                ""
+            ),
+
+            "price": product_data["price"],
+
+            "discounted_price": product_data.get(
+                "discounted_price",
+                0
+            ),
+
+            "quantity": 1
+        }
+
+    session["cart"] = cart
+
+    session.modified = True
+
+    flash(
+        "Product added to cart!",
+        "success"
+    )
+
+    return redirect(
+        request.referrer
+        or url_for("products")
+    )
+
+
+# ============================================================
+# CART
+# ============================================================
+
+@app.route("/cart")
+def cart():
+
+    cart = session.get(
+        "cart",
+        {}
+    )
+
+    if not isinstance(
+        cart,
+        dict
+    ):
+
+        cart = {}
+
+    cart_items = []
+
+    total = 0
+
+    for key, item in cart.items():
+
+        try:
+
+            product_id = int(
+                item.get(
+                    "id",
+                    key
+                )
+            )
+
+        except (
+            ValueError,
+            TypeError
+        ):
+
+            continue
+
+        # Always get fresh product information
+        # from train.csv.
+        product_data = get_product_by_id(
+            product_id
+        )
+
+        if not product_data:
+            continue
+
+        try:
+
+            quantity = int(
+                item.get(
+                    "quantity",
+                    1
+                )
+            )
+
+        except (
+            ValueError,
+            TypeError
+        ):
+
+            quantity = 1
+
+        if quantity < 1:
+            quantity = 1
+
+        original_price = safe_float(
+            product_data.get(
+                "price",
+                0
+            )
+        )
+
+        discounted_price = safe_float(
+            product_data.get(
+                "discounted_price",
+                0
+            )
+        )
+
+        if (
+            discounted_price > 0
+            and discounted_price < original_price
+        ):
+
+            price = discounted_price
+
+        else:
+
+            price = original_price
+
+        subtotal = (
+            price * quantity
+        )
+
+        cart_item = {
+
+            "id": product_id,
+
+            "name": product_data.get(
+                "name",
+                ""
+            ),
+
+            "brand": product_data.get(
+                "brand",
+                ""
+            ),
+
+            "category": product_data.get(
+                "category",
+                ""
+            ),
+
+            "description": product_data.get(
+                "description",
+                ""
+            ),
+
+            "variant": product_data.get(
+                "variant",
+                ""
+            ),
+
+            "usage": product_data.get(
+                "usage",
+                ""
+            ),
+
+            "image_url": product_data.get(
+                "image_url",
+                ""
+            ),
+
+            "price": price,
+
+            "original_price": original_price,
+
+            "discounted_price": discounted_price,
+
+            "quantity": quantity,
+
+            "subtotal": subtotal
+        }
+
+        cart_items.append(
+            cart_item
+        )
+
+        total += subtotal
+
+    session["cart"] = cart
+
+    session.modified = True
+
+    return render_template(
+        "cart.html",
+        cart_items=cart_items,
+        cart_products=cart_items,
+        total=total
+    )
+
+
+# ============================================================
+# REMOVE FROM CART
+# ============================================================
+
+@app.route(
+    "/remove-from-cart/<int:product_id>"
+)
+def remove_from_cart(product_id):
+
+    cart = session.get(
+        "cart",
+        {}
+    )
+
+    if not isinstance(
+        cart,
+        dict
+    ):
+
+        cart = {}
+
+    key = str(
+        product_id
+    )
+
+    if key in cart:
+
+        del cart[key]
+
+        flash(
+            "Product removed from cart.",
+            "success"
+        )
+
+    session["cart"] = cart
+
+    session.modified = True
+
+    return redirect(
+        url_for("cart")
+    )
+
+
+# ============================================================
+# CLEAR CART
+# ============================================================
+
+@app.route("/clear-cart")
+def clear_cart():
+
+    session["cart"] = {}
+
+    session.modified = True
+
+    flash(
+        "Cart cleared.",
+        "success"
+    )
+
+    return redirect(
+        url_for("cart")
+    )
+
+
+# ============================================================
+# CHECKOUT
+# ============================================================
+
+@app.route("/checkout")
+def checkout():
+
+    if "user_id" not in session:
+
+        flash(
+            "Please login before checkout.",
+            "warning"
+        )
+
+        return redirect(
+            url_for("login")
+        )
+
+    cart = session.get(
+        "cart",
+        {}
+    )
+
+    if not cart:
+
+        flash(
+            "Your cart is empty.",
+            "warning"
+        )
+
+        return redirect(
+            url_for("products")
+        )
+
+    cart_items = []
+
+    total = 0
+
+    # --------------------------------------------------------
+    # BUILD CHECKOUT ITEMS
+    # --------------------------------------------------------
+
+    for key, item in cart.items():
+
+        try:
+
+            product_id = int(
+                item.get(
+                    "id",
+                    key
+                )
+            )
+
+        except (
+            ValueError,
+            TypeError
+        ):
+
+            continue
+
+        # Get complete product information.
+        product_data = get_product_by_id(
+            product_id
+        )
+
+        if not product_data:
+            continue
+
+        try:
+
+            quantity = int(
+                item.get(
+                    "quantity",
+                    1
+                )
+            )
+
+        except (
+            ValueError,
+            TypeError
+        ):
+
+            quantity = 1
+
+        if quantity < 1:
+            quantity = 1
+
+        original_price = safe_float(
+            product_data.get(
+                "price",
+                0
+            )
+        )
+
+        discounted_price = safe_float(
+            product_data.get(
+                "discounted_price",
+                0
+            )
+        )
+
+        if (
+            discounted_price > 0
+            and discounted_price < original_price
+        ):
+
+            price = discounted_price
+
+        else:
+
+            price = original_price
+
+        subtotal = (
+            price * quantity
+        )
+
+        total += subtotal
+
+        # ----------------------------------------------------
+        # IMPORTANT:
+        # Include category because checkout.html uses it.
+        # ----------------------------------------------------
+
+        cart_items.append({
+
+            "id": product_data["id"],
+
+            "name": product_data["name"],
+
+            "brand": product_data.get(
+                "brand",
+                ""
+            ),
+
+            "category": product_data.get(
+                "category",
+                ""
+            ),
+
+            "description": product_data.get(
+                "description",
+                ""
+            ),
+
+            "variant": product_data.get(
+                "variant",
+                ""
+            ),
+
+            "usage": product_data.get(
+                "usage",
+                ""
+            ),
+
+            "image_url": product_data.get(
+                "image_url",
+                ""
+            ),
+
+            "price": price,
+
+            "original_price": original_price,
+
+            "discounted_price": discounted_price,
+
+            "quantity": quantity,
+
+            "subtotal": subtotal
+        })
+
+    return render_template(
+        "checkout.html",
+        cart_items=cart_items,
+        cart_products=cart_items,
+        total=total
+    )
+
+
+# ============================================================
+# PLACE ORDER
+# ============================================================
+
+@app.route(
+    "/place-order",
+    methods=["POST"]
+)
+def place_order():
+
+    if "user_id" not in session:
+
+        flash(
+            "Please login before placing an order.",
+            "warning"
+        )
+
+        return redirect(
+            url_for("login")
+        )
+
+    cart = session.get(
+        "cart",
+        {}
+    )
+
+    if not cart:
+
+        flash(
+            "Your cart is empty.",
+            "warning"
+        )
+
+        return redirect(
+            url_for("products")
+        )
+
+    total = 0
+
+    order_items_data = []
+
+    # --------------------------------------------------------
+    # CALCULATE TOTAL
+    # --------------------------------------------------------
+
+    for key, item in cart.items():
+
+        try:
+
+            product_id = int(
+                item.get(
+                    "id",
+                    key
+                )
+            )
+
+        except (
+            ValueError,
+            TypeError
+        ):
+
+            continue
+
+        product_data = get_product_by_id(
+            product_id
+        )
+
+        if not product_data:
+            continue
+
+        try:
+
+            quantity = int(
+                item.get(
+                    "quantity",
+                    1
+                )
+            )
+
+        except (
+            ValueError,
+            TypeError
+        ):
+
+            quantity = 1
+
+        if quantity < 1:
+            quantity = 1
+
+        original_price = safe_float(
+            product_data.get(
+                "price",
+                0
+            )
+        )
+
+        discounted_price = safe_float(
+            product_data.get(
+                "discounted_price",
+                0
+            )
+        )
+
+        if (
+            discounted_price > 0
+            and discounted_price < original_price
+        ):
+
+            price = discounted_price
+
+        else:
+
+            price = original_price
+
+        subtotal = (
+            price * quantity
+        )
+
+        total += subtotal
+
+        order_items_data.append({
+
+            "product_id": product_data["id"],
+
+            "quantity": quantity,
+
+            "price": price
+        })
+
+    if not order_items_data:
+
+        flash(
+            "No valid products found in cart.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("cart")
+        )
+
+    # --------------------------------------------------------
+    # CREATE ORDER
+    # --------------------------------------------------------
+
+    order = Order(
+
+        user_id=session["user_id"],
+
+        total_amount=total,
+
+        status="Placed"
+    )
+
+    db.session.add(
+        order
+    )
+
+    db.session.flush()
+
+    # --------------------------------------------------------
+    # CREATE ORDER ITEMS
+    # --------------------------------------------------------
+
+    for item in order_items_data:
+
+        order_item = OrderItem(
+
+            order_id=order.id,
+
+            product_id=item["product_id"],
+
+            quantity=item["quantity"],
+
+            price=item["price"]
+        )
+
+        db.session.add(
+            order_item
+        )
+
+    db.session.commit()
+
+    # --------------------------------------------------------
+    # CLEAR CART AFTER ORDER
+    # --------------------------------------------------------
+
+    session["cart"] = {}
+
+    session.modified = True
+
+    return redirect(
+        url_for(
+            "order_success",
+            order_id=order.id
+        )
+    )
+
+
+# ============================================================
+# ORDER SUCCESS
+# ============================================================
+
+@app.route(
+    "/order-success/<int:order_id>"
+)
+def order_success(order_id):
+
+    order = Order.query.get(
+        order_id
+    )
+
+    if not order:
+
+        flash(
+            "Order not found.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("home")
+        )
+
+    return render_template(
+        "order_success.html",
+        order=order
+    )
+
+
+# ============================================================
 # CREATE DATABASE TABLES
 # ============================================================
 
 with app.app_context():
 
-    db.create_all()
+    try:
+
+        db.create_all()
+
+        print(
+            "Database tables ready."
+        )
+
+    except Exception as e:
+
+        print(
+            "Database initialization warning:",
+            e
+        )
 
 
 # ============================================================
-# RUN APPLICATION
+# START APPLICATION
 # ============================================================
 
 if __name__ == "__main__":
 
-    print(
-        "AI recommendation model loaded."
-    )
-
-    print(
-        "Starting ShopSmart..."
-    )
+    print("=" * 60)
+    print("Starting ShopSmart...")
+    print("AI-powered e-commerce platform")
+    print(f"Products loaded: {len(df)}")
+    print("Cart image support: ENABLED")
+    print("Checkout category support: ENABLED")
+    print("=" * 60)
 
     app.run(
         debug=True

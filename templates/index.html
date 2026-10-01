@@ -8,10 +8,89 @@
     <meta name="viewport"
           content="width=device-width, initial-scale=1.0">
 
-    <title>ShopSmart - AI E-Commerce</title>
+    <title>
+        ShopSmart - AI-Powered E-Commerce
+    </title>
 
     <link rel="stylesheet"
           href="{{ url_for('static', filename='css/style.css') }}">
+
+
+    <style>
+
+        /* =====================================================
+           HOME PRODUCT IMAGES
+        ===================================================== */
+
+        .home-product-image {
+            height: 220px;
+            width: 100%;
+            background: #f7f7f7;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            overflow: hidden;
+        }
+
+        .home-product-image img {
+            width: 100%;
+            height: 220px;
+
+            object-fit: contain;
+
+            background: white;
+
+            transition: transform 0.3s ease;
+        }
+
+        .product-card:hover
+        .home-product-image img {
+            transform: scale(1.05);
+        }
+
+        .image-placeholder {
+            font-size: 65px;
+        }
+
+        /* =====================================================
+           DISCOUNT PRICE
+        ===================================================== */
+
+        .price-container {
+            margin: 8px 0;
+        }
+
+        .discounted-price {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .original-price {
+            color: #888;
+            text-decoration: line-through;
+            font-size: 14px;
+            margin-left: 7px;
+        }
+
+        /* =====================================================
+           RESPONSIVE
+        ===================================================== */
+
+        @media (max-width: 768px) {
+
+            .home-product-image {
+                height: 190px;
+            }
+
+            .home-product-image img {
+                height: 190px;
+            }
+
+        }
+
+    </style>
 
 </head>
 
@@ -19,296 +98,466 @@
 <body>
 
 
-<!-- =====================================================
-     NAVIGATION
-====================================================== -->
+<!-- =========================================================
+     NAVBAR
+========================================================= -->
 
-<header class="navbar">
+<nav class="navbar">
 
-    <div class="logo">
+    <a href="{{ url_for('home') }}"
+       class="logo">
+
         🛒 ShopSmart
-    </div>
+
+    </a>
 
 
-    <div class="search-box">
+    <form class="search-form"
+          action="{{ url_for('products') }}"
+          method="GET">
 
-        <form action="{{ url_for('products') }}"
-              method="GET">
+        <input
+            type="text"
+            name="search"
+            placeholder="Search products..."
+        >
 
-            <input
-                type="text"
-                name="search"
-                placeholder="Search products..."
-            >
+        <button type="submit">
+            🔍
+        </button>
 
-            <button type="submit">
-                🔍
-            </button>
-
-        </form>
-
-    </div>
+    </form>
 
 
     <div class="nav-links">
 
-        <a href="{{ url_for('home') }}">
+        <a href="{{ url_for('home') }}"
+           class="active">
+
             Home
+
         </a>
+
 
         <a href="{{ url_for('products') }}">
+
             Products
+
         </a>
 
-        <a href="{{ url_for('login') }}">
-            Login
+
+        <a href="{{ url_for('recommendations') }}">
+
+            AI Picks
+
         </a>
 
-        <a href="{{ url_for('cart') }}">
+
+        {% if session.user_name %}
+
+            <a href="{{ url_for('logout') }}">
+
+                Logout
+
+            </a>
+
+        {% else %}
+
+            <a href="{{ url_for('login') }}">
+
+                Login
+
+            </a>
+
+        {% endif %}
+
+
+        <a href="{{ url_for('cart') }}"
+           class="nav-cart">
+
             🛒 Cart
+
         </a>
 
     </div>
 
-</header>
+</nav>
 
 
 
-<!-- =====================================================
-     HERO SECTION
-====================================================== -->
+<!-- =========================================================
+     FLASH MESSAGES
+========================================================= -->
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+
+    {% if messages %}
+
+        <div class="flash-container">
+
+            {% for category, message in messages %}
+
+                <div class="flash-message flash-{{ category }}">
+
+                    {{ message }}
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% endif %}
+
+{% endwith %}
+
+
+
+<!-- =========================================================
+     HERO
+========================================================= -->
 
 <section class="hero">
 
-    <div class="hero-content">
-
-        <h1>
-            Shop Smarter with AI
-        </h1>
-
-        <p>
-            Discover products you'll love with
-            personalized AI recommendations.
-        </p>
-
-
-        <a
-            href="{{ url_for('products') }}"
-            class="shop-btn"
-        >
-            Shop Now
-        </a>
-
-    </div>
-
-</section>
-
-
-
-<!-- =====================================================
-     CATEGORIES
-====================================================== -->
-
-<section class="section">
-
-    <h2>
-        Shop by Category
-    </h2>
-
-
-    <div class="categories">
-
-
-        <div class="category-card">
-
-            👕
-
-            <h3>
-                Fashion
-            </h3>
-
-        </div>
-
-
-        <div class="category-card">
-
-            📱
-
-            <h3>
-                Electronics
-            </h3>
-
-        </div>
-
-
-        <div class="category-card">
-
-            🏠
-
-            <h3>
-                Home
-            </h3>
-
-        </div>
-
-
-        <div class="category-card">
-
-            💄
-
-            <h3>
-                Beauty
-            </h3>
-
-        </div>
-
-
-    </div>
-
-</section>
-
-
-
-<!-- =====================================================
-     FEATURED PRODUCTS
-====================================================== -->
-
-<section class="section">
-
-    <h2>
-        Featured Products
-    </h2>
-
-
-    <div class="products">
-
-
-        <div class="product-card">
-
-            <div class="product-image">
-                👟
-            </div>
-
-            <h3>
-                Running Shoes
-            </h3>
-
-            <p>
-                Comfortable sports shoes
-            </p>
-
-            <strong>
-                ₹1,999
-            </strong>
-
-            <br><br>
-
-            <a href="{{ url_for('products') }}">
-                Add to Cart
-            </a>
-
-        </div>
-
-
-
-        <div class="product-card">
-
-            <div class="product-image">
-                🎧
-            </div>
-
-            <h3>
-                Wireless Headphones
-            </h3>
-
-            <p>
-                High quality sound
-            </p>
-
-            <strong>
-                ₹2,499
-            </strong>
-
-            <br><br>
-
-            <a href="{{ url_for('products') }}">
-                Add to Cart
-            </a>
-
-        </div>
-
-
-
-        <div class="product-card">
-
-            <div class="product-image">
-                ⌚
-            </div>
-
-            <h3>
-                Smart Watch
-            </h3>
-
-            <p>
-                Track your fitness
-            </p>
-
-            <strong>
-                ₹3,499
-            </strong>
-
-            <br><br>
-
-            <a href="{{ url_for('products') }}">
-                Add to Cart
-            </a>
-
-        </div>
-
-
-    </div>
-
-</section>
-
-
-
-<!-- =====================================================
-     AI RECOMMENDATIONS
-====================================================== -->
-
-<section class="ai-section">
-
-    <h2>
-        🤖 AI Recommended For You
-    </h2>
-
+    <h1>
+        Shop Smarter with AI 🤖
+    </h1>
 
     <p>
-        Our AI analyzes your interests and shopping
-        activity to suggest products you may like.
+        Discover products you'll love with
+        personalised AI recommendations
+        tailored just for you.
     </p>
 
+    <a href="{{ url_for('products') }}"
+       class="btn btn-primary">
 
-    <a
-        href="{{ url_for('recommendations') }}"
-        class="recommendation-btn"
-    >
-        View Recommendations
+        Shop Now →
+
     </a>
 
 </section>
 
 
 
-<!-- =====================================================
+<!-- =========================================================
+     CATEGORIES
+========================================================= -->
+
+<section class="page-section">
+
+    <h2 class="section-title">
+
+        Shop by Category
+
+    </h2>
+
+
+    <div class="categories-grid">
+
+
+        <a href="{{ url_for('products', search='fashion') }}"
+           class="category-card">
+
+            <span class="cat-icon">
+                👕
+            </span>
+
+            <h3>
+                Fashion
+            </h3>
+
+        </a>
+
+
+
+        <a href="{{ url_for('products', search='electronics') }}"
+           class="category-card">
+
+            <span class="cat-icon">
+                📱
+            </span>
+
+            <h3>
+                Electronics
+            </h3>
+
+        </a>
+
+
+
+        <a href="{{ url_for('products', search='home') }}"
+           class="category-card">
+
+            <span class="cat-icon">
+                🏠
+            </span>
+
+            <h3>
+                Home
+            </h3>
+
+        </a>
+
+
+
+        <a href="{{ url_for('products', search='beauty') }}"
+           class="category-card">
+
+            <span class="cat-icon">
+                💄
+            </span>
+
+            <h3>
+                Beauty
+            </h3>
+
+        </a>
+
+
+    </div>
+
+</section>
+
+
+
+<!-- =========================================================
+     FEATURED PRODUCTS
+========================================================= -->
+
+<section class="page-section"
+         style="padding-top:0">
+
+
+    <h2 class="section-title">
+
+        Featured Products
+
+    </h2>
+
+
+    <div class="product-grid">
+
+
+        {% for product in products %}
+
+
+        <div class="product-card">
+
+
+            <!-- =================================================
+                 PRODUCT IMAGE
+            ================================================== -->
+
+            <div class="home-product-image">
+
+
+                {% if product.image_url %}
+
+                    <img
+                        src="{{ product.image_url }}"
+                        alt="{{ product.name }}"
+                        loading="lazy"
+                        onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"
+                    >
+
+                    <span
+                        class="image-placeholder"
+                        style="display:none;"
+                    >
+                        🛍️
+                    </span>
+
+                {% else %}
+
+                    <span class="image-placeholder">
+                        🛍️
+                    </span>
+
+                {% endif %}
+
+
+            </div>
+
+
+
+            <!-- =================================================
+                 PRODUCT INFORMATION
+            ================================================== -->
+
+            <div class="product-card-body">
+
+
+                <h3>
+
+                    {{ product.name[:60] }}
+
+                </h3>
+
+
+                {% if product.brand %}
+
+                    <p class="product-card-category">
+
+                        Brand:
+                        {{ product.brand }}
+
+                    </p>
+
+                {% endif %}
+
+
+
+                {% if product.category %}
+
+                    <p class="product-card-category">
+
+                        {{ product.category[:50] }}
+
+                    </p>
+
+                {% endif %}
+
+
+
+                <!-- =================================================
+                     PRICE
+                ================================================== -->
+
+                {% if product.discounted_price
+                      and product.discounted_price > 0
+                      and product.discounted_price < product.price %}
+
+                    <div class="price-container">
+
+                        <span class="discounted-price">
+
+                            ₹{{ "%.2f"|format(product.discounted_price) }}
+
+                        </span>
+
+
+                        <span class="original-price">
+
+                            ₹{{ "%.2f"|format(product.price) }}
+
+                        </span>
+
+                    </div>
+
+                {% else %}
+
+                    <p class="product-card-price">
+
+                        ₹{{ "%.2f"|format(product.price) }}
+
+                    </p>
+
+                {% endif %}
+
+
+
+                <!-- =================================================
+                     ACTION BUTTONS
+                ================================================== -->
+
+                <div class="product-card-actions">
+
+
+                    <a
+                        href="{{ url_for('product', product_id=product.id) }}"
+                        class="btn btn-outline btn-sm"
+                    >
+
+                        View
+
+                    </a>
+
+
+                    <a
+                        href="{{ url_for('add_to_cart', product_id=product.id) }}"
+                        class="btn btn-accent btn-sm"
+                    >
+
+                        Add to Cart
+
+                    </a>
+
+
+                </div>
+
+
+            </div>
+
+        </div>
+
+
+        {% else %}
+
+
+        <p class="no-products">
+
+            No products available.
+
+        </p>
+
+
+        {% endfor %}
+
+
+    </div>
+
+</section>
+
+
+
+<!-- =========================================================
+     AI CTA
+========================================================= -->
+
+<section class="ai-cta">
+
+    <h2>
+
+        🤖 AI Recommended For You
+
+    </h2>
+
+
+    <p>
+
+        Our AI analyses product features to suggest
+        items you may love — based on similarity
+        and product information.
+
+    </p>
+
+
+    <a
+        href="{{ url_for('recommendations') }}"
+        class="btn btn-primary"
+    >
+
+        View AI Recommendations
+
+    </a>
+
+</section>
+
+
+
+<!-- =========================================================
      FOOTER
-====================================================== -->
+========================================================= -->
 
 <footer>
 
     <p>
-        © 2026 ShopSmart |
-        AI-Powered E-Commerce Platform
+
+        © 2026
+        <strong>ShopSmart</strong>
+        · AI-Powered E-Commerce Platform
+
     </p>
 
 </footer>
